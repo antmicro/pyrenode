@@ -46,8 +46,7 @@ def tell_renode(string, newline = True):
         string += '\n'
     renode_connection.write(string.encode())
 
-from typing import List, Dict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 @dataclass
 class Result:
@@ -66,38 +65,3 @@ def expect_cli(string, timeout = 15):
 def expect_log(regex, timeout = 15):
     result = renode_log.expect(regex, timeout=timeout)
     return Result(escape_ansi(renode_log.before.decode()), renode_log.match)
-
-# same as in tuttest, but wanted to avoid the import for now
-@dataclass
-class Snippet:
-    text: List[str] = field(default_factory=list)
-    lang: str = ''
-    meta: Dict = field(default_factory=dict)
-    commands: List[Command] = field(default_factory=list)
-
-@dataclass
-class Command:
-    prompt: str
-    command: str
-    result: str = ''
-
-def autoexec(snippet: Snippet):
-    if 'name' in snippet.meta:
-        name = snippet.meta['name']
-        LOGGER.info(f"Executing snippet '{name}'")
-    else:
-        LOGGER.info(f"Executing unnamed snippet")
-    # inject empty command to make sure we have the right prompt
-    tell_renode('');
-    for c in snippet.commands:
-        if c.prompt:
-            LOGGER.info(f"  {c.prompt}")
-            assert expect_cli(c.prompt).match is not None
-        if c.command:
-            LOGGER.info(f"  >>> {c.command}")
-            tell_renode(c.command)
-            assert expect_cli(c.command).match is not None
-        if c.result:
-            for line in c.result.strip().split('\n'):
-                LOGGER.info(f"  {line}")
-            assert expect_cli(c.result).match is not None
