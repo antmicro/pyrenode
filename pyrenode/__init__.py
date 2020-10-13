@@ -46,6 +46,7 @@ def tell_renode(string, newline = True):
         string += '\n'
     renode_connection.write(string.encode())
 
+from typing import List, Dict
 from dataclasses import dataclass, field
 
 @dataclass
