@@ -75,6 +75,12 @@ class Snippet:
     meta: Dict = field(default_factory=dict)
     commands: List[Command] = field(default_factory=list)
 
+@dataclass
+class Command:
+    prompt: str
+    command: str
+    result: str = ''
+
 def autoexec(snippet: Snippet):
     if 'name' in snippet.meta:
         name = snippet.meta['name']
