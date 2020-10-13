@@ -46,7 +46,7 @@ def tell_renode(string, newline = True):
         string += '\n'
     renode_connection.write(string.encode())
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 @dataclass
 class Result:
