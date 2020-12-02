@@ -35,7 +35,7 @@ def shutdown_renode():
     import psutil
 
     for proc in psutil.process_iter():
-        if "Renode" in proc.name():
+        if "renode" in proc.name().casefold():
             proc.kill()
 
     if renode_connection:
