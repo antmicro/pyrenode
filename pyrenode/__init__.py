@@ -85,7 +85,7 @@ def get_keywords(robot_port=3333):
 
     r = BuiltIn()
     import robot.libraries.Remote
-    remote = robot.libraries.Remote.Remote(uri="http://localhost:"+str(robot_port))
+    remote = robot.libraries.Remote.Remote(uri="http://0.0.0.0:"+str(robot_port))
     keywords = remote.get_keyword_names()
     print(f"Importing keywords: {', '.join(keywords)}")
     print()
