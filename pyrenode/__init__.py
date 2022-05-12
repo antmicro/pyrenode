@@ -16,20 +16,20 @@ def escape_ansi(line):
     ansi_escape = re.compile(r'(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]')
     return ansi_escape.sub('', line)
 
-def connect_renode(spawn_renode=True, telnet_port=None, robot_port=3333):
+def connect_renode(spawn_renode=True, telnet_port=4444, robot_port=3333):
 
     global port
     port = robot_port
     global renode_log
     if spawn_renode:
-        command = f"--plain --port {str(port)} --robot-server-port {str(robot_port)} --disable-xwt"
+        command = f"--plain --port {str(telnet_port)} --robot-server-port {str(robot_port)} --disable-xwt"
         try:
             renode_log = pexpect.spawn(f'renode {command}')
         except pexpect.ExceptionPexpect:
             renode_log = pexpect.spawn(f'renode-run exec -- {command}')
 
         renode_log.stripcr = True
-        assert expect_log(f"Monitor available in telnet mode on port {str(port)}").match is not None
+        assert expect_log(f"Monitor available in telnet mode on port {str(telnet_port)}").match is not None
         assert expect_log(f"Robot Framework remote server is listening on port {str(robot_port)}").match is not None
 
     global renode_connection
