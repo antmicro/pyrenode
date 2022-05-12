@@ -8,6 +8,7 @@ renode_connection = None
 global renode_log
 renode_log = None
 global port
+global telnet
 
 import logging
 LOGGER = logging.getLogger(__name__)
@@ -19,6 +20,8 @@ def escape_ansi(line):
 def connect_renode(spawn_renode=True, telnet_port=4444, robot_port=3333):
 
     global port
+    global telnet
+    telnet = telnet_port
     port = robot_port
     global renode_log
     if spawn_renode:
