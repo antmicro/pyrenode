@@ -9,6 +9,10 @@ global renode_log
 renode_log = None
 global port
 global telnet
+global renode_connected
+global keywords_initialized
+renode_connected = False
+keywords_initialized = False
 
 import logging
 LOGGER = logging.getLogger(__name__)
@@ -19,6 +23,10 @@ def escape_ansi(line):
 
 def connect_renode(spawn_renode=True, telnet_port=4444, robot_port=3333):
 
+    global renode_connected
+    if renode_connected:
+        print("Renode already connected...")
+        return
     global port
     global telnet
     telnet = telnet_port
@@ -43,6 +51,7 @@ def connect_renode(spawn_renode=True, telnet_port=4444, robot_port=3333):
         tell_renode(" ")
         tell_renode(f"logFile @{logfile}")
     #tell_renode("Clear") # this totally breaks stuff - why?
+    renode_connected = True
 
 def shutdown_renode():
 
@@ -95,6 +104,10 @@ import sys
 
 def get_keywords():
 
+    global keywords_initialized
+    if keywords_initialized:
+        print("Keywords already initialized...")
+        return
     current_module = sys.modules['__main__']
 
     r = BuiltIn()
@@ -106,3 +119,4 @@ def get_keywords():
     for k in keywords:
         func = bind_function(remote, k)
         setattr(current_module, k, func)
+    keywords_initialized = True
