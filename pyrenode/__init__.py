@@ -25,7 +25,7 @@ def connect_renode(spawn_renode=True, telnet_port=None, robot_port=3333):
         command = f"--plain --port {str(port)} --robot-server-port {str(robot_port)} --disable-xwt"
         try:
             renode_log = pexpect.spawn(f'renode {command}')
-        except ExceptionPexpect:
+        except pexpect.ExceptionPexpect:
             renode_log = pexpect.spawn(f'renode-run exec -- {command}')
 
         renode_log.stripcr = True
