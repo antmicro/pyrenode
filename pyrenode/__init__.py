@@ -7,6 +7,8 @@ global renode_connection
 renode_connection = None
 global renode_log
 renode_log = None
+global port
+global telnet
 
 import logging
 LOGGER = logging.getLogger(__name__)
@@ -15,19 +17,31 @@ def escape_ansi(line):
     ansi_escape = re.compile(r'(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]')
     return ansi_escape.sub('', line)
 
-def connect_renode(port=12348, robot_port=3333):
+def connect_renode(spawn_renode=True, telnet_port=4444, robot_port=3333):
 
+    global port
+    global telnet
+    telnet = telnet_port
+    port = robot_port
     global renode_log
-    renode_log = pexpect.spawn(f'renode --plain --port {str(port)} --robot-server-port {str(robot_port)} --disable-xwt')
-    renode_log.stripcr = True
-    assert expect_log(f"Monitor available in telnet mode on port {str(port)}").match is not None
-    assert expect_log(f"Robot Framework remote server is listening on port {str(robot_port)}").match is not None
+    if spawn_renode:
+        command = f"--plain --port {str(telnet_port)} --robot-server-port {str(robot_port)} --disable-xwt"
+        try:
+            renode_log = pexpect.spawn(f'renode {command}')
+        except pexpect.ExceptionPexpect:
+            renode_log = pexpect.spawn(f'renode-run exec -- {command}')
+
+        renode_log.stripcr = True
+        assert expect_log(f"Monitor available in telnet mode on port {str(telnet_port)}").match is not None
+        assert expect_log(f"Robot Framework remote server is listening on port {str(robot_port)}").match is not None
+
     global renode_connection
-    renode_connection = telnetlib.Telnet("localhost", port)
-    assert expect_cli("(monitor)").match is not None
-    # first char gets eaten for some reason, hence the space
-    tell_renode(" ")
-    tell_renode(f"logFile @{logfile}")
+    if telnet_port is not None:
+        renode_connection = telnetlib.Telnet("localhost", telnet_port)
+        assert expect_cli("(monitor)").match is not None
+        # first char gets eaten for some reason, hence the space
+        tell_renode(" ")
+        tell_renode(f"logFile @{logfile}")
     #tell_renode("Clear") # this totally breaks stuff - why?
 
 def shutdown_renode():
@@ -79,13 +93,13 @@ def bind_function(remote, name):
 
 import sys
 
-def get_keywords(robot_port=3333):
+def get_keywords():
 
     current_module = sys.modules['__main__']
 
     r = BuiltIn()
     import robot.libraries.Remote
-    remote = robot.libraries.Remote.Remote(uri="http://0.0.0.0:"+str(robot_port))
+    remote = robot.libraries.Remote.Remote(uri="http://0.0.0.0:"+str(port))
     keywords = remote.get_keyword_names()
     print(f"Importing keywords: {', '.join(keywords)}")
     print()
