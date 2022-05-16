@@ -21,7 +21,7 @@ def escape_ansi(line):
     ansi_escape = re.compile(r'(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]')
     return ansi_escape.sub('', line)
 
-def connect_renode(spawn_renode=True, telnet_port=4444, robot_port=3333):
+def connect_renode(spawn_renode=True, telnet_port=4567, robot_port=3456):
 
     global renode_connected
     if renode_connected:
