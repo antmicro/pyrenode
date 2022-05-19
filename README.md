@@ -6,18 +6,20 @@ A rudimentary Python library to talk to Renode programatically.
 
 ## Version 1.0
 
-This is on the master branch. See README there for details. It was necessary for enabling demos like the [Google Colab integation](https://github.com/antmicro/tensorflow-arduino-examples).
+Exposed telnet interface to Renode, allowing you to control it with the ``tell_renode`` command.
 
 ## Version 2.0
 
-This branch contains a seed for the "new" pyrenode, using Robot remote keyword execution.
-It's the new stuff bolted onto original pyrenode, so it's not super neat.
+This version is using Robot remote keyword execution.
+
+It imports all Renode keywords and enables them in the current namespace. See example.py for details.
 
 ### Installing
 
 ```
-pip install robotframework
-# and you need Renode too of course!
+pip install git+https://github.com/antmicro/pyrenode.git
+pip install git+https://github.com/antmicro/renode-run
+
 ```
 
 ## Running an example
@@ -29,3 +31,6 @@ pip install robotframework
 ## TODO
 
 * [ ] Better error handling
+* [ ] Namespace organization
+* [ ] Tutorial
+* [ ] Tests
