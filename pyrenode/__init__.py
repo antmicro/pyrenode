@@ -64,8 +64,19 @@ def connect_renode(spawn_renode=True, telnet_port=4567, robot_port=3456):
         assert expect_log(f"Robot Framework remote server is listening on port {str(robot_port)}").match is not None
 
     if telnet_port is not None:
-        state.renode_connection = telnetlib.Telnet("localhost", telnet_port)
-        assert expect_cli("(monitor)").match is not None
+        done = False
+        tries = 5
+        while not done:
+            try:
+                state.renode_connection = telnetlib.Telnet("localhost", telnet_port)
+                assert expect_cli("(monitor)").match is not None
+                done = True
+            except:
+                if tries <= 0:
+                    raise
+                tries -= 1
+                time.sleep(0.2)
+
         # first char gets eaten for some reason, hence the space
         tell_renode(" ")
         tell_renode(f"logFile @{logfile}")
@@ -123,8 +134,20 @@ def get_keywords():
 
     current_module = sys.modules['__main__']
 
-    remote = robot.libraries.Remote.Remote(uri="http://0.0.0.0:" + str(state.robot_port))
-    keywords = remote.get_keyword_names()
+    done = False
+    tries = 5
+    while not done:
+        try:
+            remote = robot.libraries.Remote.Remote(uri="http://0.0.0.0:" + str(state.robot_port))
+            keywords = remote.get_keyword_names()
+            done = True
+        except:
+            if tries <= 0:
+                raise
+            tries -= 1
+            time.sleep(0.2)
+
+
     print(f"Importing keywords: {', '.join(keywords)}")
     print()
     for k in keywords:
