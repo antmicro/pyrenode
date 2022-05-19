@@ -2,7 +2,7 @@
 
 from pyrenode import connect_renode, get_keywords
 connect_renode(robot_port=4444)
-get_keywords(robot_port=4444)
+get_keywords()
 
 uart = 'sysbus.usart1'
 ExecuteCommand('i @scripts/single-node/sam_e70.resc')
