@@ -1,9 +1,10 @@
-import re
-import telnetlib
-import sys
 import pexpect
 import psutil
+import re
 import robot.libraries.Remote
+import sys
+import telnetlib
+import time
 from dataclasses import dataclass
 
 logfile = '/tmp/renode_log.txt'
