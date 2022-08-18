@@ -117,8 +117,18 @@ def expect_log(regex, timeout = 15):
     return Result(escape_ansi(state.log_expect.before.decode()), state.log_expect.match)
 
 
+def flush_expect_buffer(exp):
+    try:
+        while True:
+            exp.expect(r'.+', timeout=0)
+    except (pexpect.TIMEOUT, pexpect.EOF):
+        pass
+
+
 def bind_function(remote, name):
     def func(*args, **kwargs):
+        flush_expect_buffer(state.log_expect)
+        
         l = [*args,*[f"{k}={v}" for k,v in kwargs.items()]]
         # Dunno why we need to aggregate args and kwargs like that, but works
         # Could use some error handling!
