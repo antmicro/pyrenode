@@ -1,4 +1,4 @@
-import pexpect
+import subprocess
 import psutil
 import re
 import robot.libraries.Remote
@@ -15,23 +15,26 @@ class State:
         self.robot_port = 0
         self.renode_connected = False
         self.keywords_initialized = False
-        self.log_expect = None
+        self.subprocess = None
         self.renode_connection = None
+
+    def __del__(self):
+        self.clean()
 
     def clean(self):
         if self.renode_connection is not None:
             tell_renode('q')
             self.renode_connection.close()
 
-        if self.log_expect is not None:
+        if self.subprocess is not None:
             try:
-                psutil.Process(self.log_expect.pid)
+                psutil.Process(self.subprocess.pid)
             except psutil.NoSuchProcess:
                 pass
 
         self.renode_connected = False
         self.keywords_initialized = False
-        self.log_expect = None
+        self.subprocess = None
         self.renode_connection = None
 
 
@@ -44,7 +47,7 @@ def escape_ansi(line):
     return ansi_escape.sub('', line)
 
 
-def connect_renode(spawn_renode=True, telnet_port=4567, robot_port=3456):
+def connect_renode(spawn_renode=True, telnet_port=4567, robot_port=3456, timeout=10, retry_time=0.2):
     if state.renode_connected:
         print("Renode already connected...")
         return
@@ -53,19 +56,18 @@ def connect_renode(spawn_renode=True, telnet_port=4567, robot_port=3456):
     state.robot_port = robot_port
 
     if spawn_renode:
-        command = f"--plain --port {str(telnet_port)} --robot-server-port {str(robot_port)} --disable-xwt"
+        command = ['--plain', '--port', str(telnet_port), '--robot-server-port', str(robot_port), '--disable-xwt']
+
         try:
-            state.log_expect = pexpect.spawn(f'renode {command}')
-        except pexpect.ExceptionPexpect:
-            state.log_expect = pexpect.spawn(f'renode-run exec -- {command}')
+            state.subprocess = subprocess.Popen(['renode', *command], stdout=subprocess.DEVNULL)
+        except OSError:
+            state.subprocess = subprocess.Popen(['renode-run', 'exec', '--', *command], stdout=subprocess.DEVNULL)
 
-        state.log_expect.stripcr = True
-        assert expect_log(f"Monitor available in telnet mode on port {str(telnet_port)}").match is not None
-        assert expect_log(f"Robot Framework remote server is listening on port {str(robot_port)}").match is not None
-
+    # Waiting for Renode to start the Telnet service
+    # Defaults 10/0.2 -> maximum of about 50 connection attempts
     if telnet_port is not None:
         done = False
-        tries = 5
+        tries = int(timeout/retry_time)
         while not done:
             try:
                 state.renode_connection = telnetlib.Telnet("localhost", telnet_port)
@@ -75,7 +77,7 @@ def connect_renode(spawn_renode=True, telnet_port=4567, robot_port=3456):
                 if tries <= 0:
                     raise
                 tries -= 1
-                time.sleep(0.2)
+                time.sleep(retry_time)
 
         # first char gets eaten for some reason, hence the space
         tell_renode(" ")
@@ -110,11 +112,6 @@ def expect_cli(string, timeout = 15):
     expected = re.escape(string).replace('\n','\r*\n\r*')
     idx, matches, data = state.renode_connection.expect([expected.encode()], timeout)
     return Result(escape_ansi(data.decode()), matches)
-
-
-def expect_log(regex, timeout = 15):
-    result = state.log_expect.expect(regex, timeout=timeout)
-    return Result(escape_ansi(state.log_expect.before.decode()), state.log_expect.match)
 
 
 def bind_function(remote, name):
