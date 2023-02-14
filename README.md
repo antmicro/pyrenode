@@ -1,6 +1,6 @@
 # Pyrenode
 
-Copyright (c) 2020-2022 Antmicro
+Copyright (c) 2020-2023 Antmicro
 
 A rudimentary Python library to talk to Renode programatically.
 
@@ -19,7 +19,6 @@ It imports all Renode keywords and enables them in the current namespace. See ex
 ```
 pip install git+https://github.com/antmicro/pyrenode.git
 pip install git+https://github.com/antmicro/renode-run
-
 ```
 
 ## Running an example
