@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from pyrenode import connect_renode, get_keywords
-connect_renode(robot_port=4444)
+connect_renode()
 get_keywords()
 
 uart = 'sysbus.usart1'

@@ -47,7 +47,7 @@ def escape_ansi(line):
     return ansi_escape.sub('', line)
 
 
-def connect_renode(spawn_renode=True, telnet_port=4567, robot_port=3456, timeout=10, retry_time=0.2):
+def connect_renode(spawn_renode=True, telnet_port=4567, robot_port=0, timeout=10, retry_time=0.2):
     if state.renode_connected:
         print("Renode already connected...")
         return
