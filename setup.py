@@ -6,7 +6,7 @@ setup(name='pyrenode',
       author='Antmicro',
       author_email='mgielda@antmicro.com',
       install_requires=[
-          'pexpect', 'dataclasses', 'psutil', 'robotframework==4.0.1'
+          'pexpect', 'dataclasses', 'psutil', 'robotframework==6.0.2'
       ],
       license='MIT',
       packages=['pyrenode'])
