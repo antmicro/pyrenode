@@ -28,10 +28,33 @@ class State:
     def clean(self):
         if self.renode_connection is not None:
             tell_renode('q')
+            # wait for Renode process to exit
+            try:
+                proc = psutil.Process(self.renode_pid)
+            except psutil.NoSuchProcess:
+                # already closed
+                pass
+            status = None
+            start_time = time.perf_counter()
+            while status != psutil.STATUS_ZOMBIE:
+                try:
+                    status = proc.status()
+                except psutil.NoSuchProcess:
+                    break
+                if time.perf_counter() - start_time > 30:
+                    print('Renode did not exit after 30 seconds')
+                    break
+                time.sleep(.1)
+
             self.renode_connection.close()
 
-        pids = [self.subprocess.pid, self.renode_pid]
-        for pid in pids:
+        pids = []
+        if self.subprocess is not None:
+            pids.append(self.subprocess.pid)
+        if self.renode_pid is not None:
+            pids.append(self.renode_pid)
+
+        for pid in set(pids):
             try:
                 os.kill(pid, signal.SIGTERM)
             except ProcessLookupError:
@@ -44,6 +67,7 @@ class State:
         self.keywords_initialized = False
         self.subprocess = None
         self.renode_connection = None
+        self.renode_pid = None
 
 
 global state
