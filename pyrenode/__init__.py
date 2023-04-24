@@ -70,7 +70,6 @@ class State:
         self.renode_pid = None
 
 
-global state
 state = State()
 
 
