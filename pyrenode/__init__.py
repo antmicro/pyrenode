@@ -150,8 +150,6 @@ def connect_renode(spawn_renode=True, telnet_port=4567, robot_port=0, timeout=10
     state.telnet_port = telnet_port
     state.robot_port = robot_port
     wait_for_renode = False
-    robot_connected = False
-    telnet_connected = False
 
     if spawn_renode:
         command = ['--plain', '--port', str(telnet_port), '--robot-server-port', str(robot_port), '--disable-xwt']
