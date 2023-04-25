@@ -17,6 +17,8 @@ from pyrenode.singleton import Singleton
 
 
 DEFAULT_LOG_PATH = Path(f'{tempfile.gettempdir()}/renode_log.txt')
+FORMAT = '[%(asctime)-15s %(filename)s:%(lineno)s] [%(levelname)s] %(message)s'
+logging.basicConfig(format=FORMAT)
 
 
 class RobotUninitialized(Exception):
@@ -53,8 +55,7 @@ class Pyrenode(metaclass=Singleton):
         try:
             self.cleanup()
         except Exception as e:
-            logging.error(f'Pyrenode: Cleanup error: {e}\n'
-                          f'{traceback.format_exc}')
+            logging.error(f'Cleanup error: {e}\n{traceback.format_exc}')
 
     def initialize(
             self,
@@ -91,10 +92,10 @@ class Pyrenode(metaclass=Singleton):
             self.write_to_renode(' ')
             self.write_to_renode(f'logFile @{self.renode_log_path}')
             self.initialized = True
-            logging.info('Pyrenode: initalized')
+            logging.info('initalized')
         except Exception:
             logging.error(
-                'Pyrenode: Exception occurred during initialization:\n'
+                'Exception occurred during initialization:\n'
                 f'{traceback.format_exc()}'
             )
             self.cleanup()
@@ -103,7 +104,7 @@ class Pyrenode(metaclass=Singleton):
         """
         Closes Renode and cleanups all resources.
         """
-        logging.info('Pyrenode: starting cleanup')
+        logging.info('starting cleanup')
         logs = ''
         if self.renode_process is not None:
 
@@ -124,11 +125,13 @@ class Pyrenode(metaclass=Singleton):
                 status = proc.status()
                 logs += self.read_from_renode()
                 logging.info(
-                    f'Pyrenode: Renode process status: {status}'
+                    f'Renode process status: {status}'
                 )
                 time.sleep(.5)
                 if time.perf_counter() - start_time > 30:
-                    logging.error('Renode did not close properly after 30s')
+                    logging.error(
+                        'Renode did not close properly after 30s'
+                    )
                     break
 
             logging.debug(f'Renode logs:\n{logs}')
@@ -140,7 +143,7 @@ class Pyrenode(metaclass=Singleton):
                 continue
             except Exception as e:
                 logging.warning(
-                    f'Pyrenode: could not kill process pid={pid}, error: {e}'
+                    f'could not kill process pid={pid}, error: {e}'
                 )
                 continue
 
@@ -162,7 +165,7 @@ class Pyrenode(metaclass=Singleton):
         self.renode_pipe_out = None
 
         self.initialized = False
-        logging.info('Pyrenode: cleanup done')
+        logging.info('cleanup done')
 
     def write_to_renode(self, command: str, newline: bool = True):
         """
@@ -180,14 +183,14 @@ class Pyrenode(metaclass=Singleton):
             command += '\n'
 
         if self.telnet_connection is not None:
-            logging.debug(f'Pyrenode: writing via telnet: "{command}"')
+            logging.debug(f'writing via telnet: "{command}"')
             self.telnet_connection.write(f'{command}\n'.encode())
         elif (self.renode_pipe_in is not None and
                 not self.renode_pipe_in.closed):
-            logging.debug(f'Pyrenode: writing via stdin: "{command}"')
+            logging.debug(f'writing via stdin: "{command}"')
             self.renode_pipe_in.write(f'{command}\n')
         else:
-            logging.error('Pyrenode: no connection to Renode')
+            logging.error('no connection to Renode')
             raise ConnectionError('No connection to Renode')
 
     def read_from_renode(self) -> str:
@@ -311,7 +314,7 @@ class Pyrenode(metaclass=Singleton):
         """
         Starts Renode in background process.
         """
-        logging.info('Pyrenode: starting Renode process')
+        logging.info('starting Renode process')
         # check if renode or renode-run exists in system
         renode_executable = None
         renode_args = []
@@ -386,13 +389,13 @@ class Pyrenode(metaclass=Singleton):
         else:
             self.renode_pid = self.renode_process.pid
 
-        logging.info('Pyrenode: Renode process started')
+        logging.info('Renode process started')
 
     def _open_telnet(self):
         """
         Opens telnet connection.
         """
-        logging.info('Pyrenode: opening telnet')
+        logging.info('opening telnet')
         self.telnet_connection = self._retry_until_success(
             telnetlib.Telnet,
             ['localhost', self.telnet_port],
@@ -405,15 +408,15 @@ class Pyrenode(metaclass=Singleton):
             timeout=10
         )
         if matches is None:
-            raise ConnectionError('Pyrenode: Telnet connection error')
+            raise ConnectionError('Telnet connection error')
 
-        logging.info('Pyrenode: Telnet connected')
+        logging.info('Telnet connected')
 
     def _open_robot(self):
         """
         Opens Robot connection.
         """
-        logging.info('Pyrenode: opening Robot connection')
+        logging.info('opening Robot connection')
         if self.robot_port == 0:
             def get_robot_port():
                 robot_port_file = (Path(tempfile.gettempdir()) /
@@ -444,7 +447,7 @@ class Pyrenode(metaclass=Singleton):
 
         self.keywords = self.robot_connection.get_keyword_names()
 
-        logging.info(f'Pyrenode: Robot connected via port {self.robot_port}')
+        logging.info(f'Robot connected via port {self.robot_port}')
 
     @staticmethod
     def escape_ansi(line):
