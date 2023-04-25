@@ -129,6 +129,7 @@ class Pyrenode(metaclass=Singleton):
                 time.sleep(.5)
                 if time.perf_counter() - start_time > 30:
                     logging.error('Renode did not close properly after 30s')
+                    break
 
             logging.debug(f'Renode logs:\n{logs}')
 
