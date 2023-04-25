@@ -87,8 +87,10 @@ class Pyrenode(metaclass=Singleton):
         self.renode_log_path = renode_log_path
         try:
             self._start_renode_process()
-            self._open_telnet()
-            self._open_robot()
+            if self.telnet_port is not None:
+                self._open_telnet()
+            if self.robot_port is not None:
+                self._open_robot()
             self.write_to_renode(' ')
             self.write_to_renode(f'logFile @{self.renode_log_path}')
             self.initialized = True
@@ -156,10 +158,20 @@ class Pyrenode(metaclass=Singleton):
 
         if (self.renode_pipe_in is not None and
                 not self.renode_pipe_in.closed):
-            self.renode_pipe_in.close()
+            try:
+                self.renode_pipe_in.close()
+            except OSError as e:
+                logging.warning(
+                    f'Error during input pipe closing: {e}'
+                )
         if (self.renode_pipe_out is not None and
                 not self.renode_pipe_out.closed):
-            self.renode_pipe_out.close()
+            try:
+                self.renode_pipe_out.close()
+            except OSError as e:
+                logging.warning(
+                    f'Error during output pipe closing: {e}'
+                )
 
         self.renode_pipe_in = None
         self.renode_pipe_out = None
@@ -189,6 +201,7 @@ class Pyrenode(metaclass=Singleton):
                 not self.renode_pipe_in.closed):
             logging.debug(f'writing via stdin: "{command}"')
             self.renode_pipe_in.write(f'{command}\n')
+            self.renode_pipe_in.flush()
         else:
             logging.error('no connection to Renode')
             raise ConnectionError('No connection to Renode')
