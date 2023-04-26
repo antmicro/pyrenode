@@ -116,8 +116,6 @@ class Pyrenode(metaclass=Singleton):
         logs = ''
         if self.renode_process is not None:
 
-            logging.info(f'Renode: process pid={self.renode_process.pid}')
-
             self.write_to_renode('q')
 
             # wait for Renode process to exit
@@ -146,8 +144,10 @@ class Pyrenode(metaclass=Singleton):
 
         for pid in set(self.subprocess_pids):
             try:
+                logging.debug(f'sending SIGTERM to process {pid}')
                 os.kill(pid, signal.SIGTERM)
             except ProcessLookupError:
+                logging.warning(f'process {pid} not found')
                 continue
             except Exception as e:
                 logging.warning(
@@ -276,6 +276,8 @@ class Pyrenode(metaclass=Singleton):
         keyword_args = list(args)
         keyword_args.extend([f'{k}={v}' for k, v in kwargs.items()])
 
+        logging.debug(f'Running keyword: {keyword} {keyword_args}')
+
         return self.robot_connection.run_keyword(keyword, keyword_args, None)
 
     def wait_until_log_contains(
@@ -385,7 +387,6 @@ class Pyrenode(metaclass=Singleton):
             stdin=pipe_in[0] if self.telnet_port is None else None,
             stdout=pipe_out[1]
         )
-        logging.info(f'{self.renode_process=}')
 
         self.subprocess_pids.append(self.renode_process.pid)
 
@@ -408,7 +409,7 @@ class Pyrenode(metaclass=Singleton):
         else:
             self.renode_pid = self.renode_process.pid
 
-        logging.info('Renode process started')
+        logging.info(f'Renode process started, pid: {self.renode_pid}')
 
     def _open_telnet(self):
         """
