@@ -308,7 +308,7 @@ class Pyrenode(metaclass=Singleton):
         if is_regex:
             pattern = re.compile(string)
             while pattern.match(log_buffer) is None:
-                if (timeout is None and
+                if (timeout is not None and
                         time.perf_counter() - start_time > timeout):
                     return False
                 if '\n' in log_buffer:
@@ -318,15 +318,12 @@ class Pyrenode(metaclass=Singleton):
 
         else:
             while string not in log_buffer:
-                if (timeout is None and
+                if (timeout is not None and
                         time.perf_counter() - start_time > timeout):
                     return False
                 if '\n' in log_buffer:
                     log_buffer = log_buffer[log_buffer.rindex('\n') + 1:]
                 log_buffer += self.read_from_renode()
-                if len(log_buffer):
-                    print('_'*64)
-                    print(log_buffer)
                 time.sleep(.01)
 
         return True
