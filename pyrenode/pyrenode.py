@@ -51,6 +51,12 @@ class Pyrenode(metaclass=Singleton):
         self.renode_pipe_in = None
         self.renode_pipe_out = None
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.cleanup()
+
     def __del__(self):
         try:
             self.cleanup()
