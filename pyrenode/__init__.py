@@ -10,19 +10,22 @@ def connect_renode(
         telnet_port: int = 4567,
         robot_port: int = 0,
         timeout: float = 10.,
-        retry_time: float = 0.2):
-    pyrenode = Pyrenode()
-    pyrenode.initialize(telnet_port=telnet_port, robot_port=robot_port)
+        retry_time: float = .2):
+    Pyrenode().initialize(
+        spawn_renode=spawn_renode,
+        telnet_port=telnet_port,
+        robot_port=robot_port,
+        timeout=timeout,
+        retry_time=retry_time
+    )
 
 
 def shutdown_renode():
-    pyrenode = Pyrenode()
-    pyrenode.cleanup()
+    Pyrenode().cleanup()
 
 
 def tell_renode(string: str, newline: bool = True):
-    pyrenode = Pyrenode()
-    pyrenode.write_to_renode(string, newline)
+    Pyrenode().write_to_renode(string, newline)
 
 
 def read_until(string: str, timeout: float = 1.):
@@ -41,9 +44,8 @@ def expect_cli(string: str, timeout: float = 15.):
         text: str = ''
         match: object = None
 
-    pyrenode = Pyrenode()
     expected = re.escape(string).replace('\n', '\r*\n\r*')
-    _, matches, data = pyrenode.telnet_connection.expect(
+    _, matches, data = Pyrenode().telnet_connection.expect(
         [expected.encode()],
         timeout
     )
@@ -60,8 +62,7 @@ def _bind_function(name: str):
 def get_keywords():
     current_module = sys.modules['__main__']
 
-    pyrenode = Pyrenode()
-    keywords = pyrenode.keywords
+    keywords = Pyrenode().keywords
 
     print(f"Importing keywords: {', '.join(keywords)}")
     print()
