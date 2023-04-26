@@ -61,7 +61,7 @@ class Pyrenode(metaclass=Singleton):
         try:
             self.cleanup()
         except Exception as e:
-            logging.error(f'Cleanup error: {e}\n{traceback.format_exc}')
+            logging.error(f'Cleanup error: {e}\n{traceback.format_exc()}')
 
     def initialize(
             self,
