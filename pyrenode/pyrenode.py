@@ -65,16 +65,21 @@ class Pyrenode(metaclass=Singleton):
 
     def initialize(
             self,
+            spawn_renode: bool = True,
             telnet_port: int = 4567,
             robot_port: int = 0,
             renode_path: Optional[Path] = None,
-            renode_log_path: Path = DEFAULT_LOG_PATH):
+            renode_log_path: Path = DEFAULT_LOG_PATH,
+            timeout: float = 10.,
+            retry_time: float = .2):
         """
         Initializes Pyrenode. It starts Renode process in background, opens
         telnet and robot connection and opens Renode log file.
 
         Parameters
         ----------
+        spawn_renode : bool
+            If Renode process should be started
         telnet_port : int
             Telnet port
         robot_port : int
@@ -83,6 +88,10 @@ class Pyrenode(metaclass=Singleton):
             Path to Renode executable
         renode_log_path : Path
             Path to Renode logs
+        timeout : float
+            Timeout for connection operations
+        retry_time : float
+            Time interval between subsequent tries
         """
         if self.initialized:
             return
@@ -92,11 +101,21 @@ class Pyrenode(metaclass=Singleton):
         self.renode_path = renode_path
         self.renode_log_path = renode_log_path
         try:
-            self._start_renode_process()
+            if spawn_renode:
+                self._start_renode_process(
+                    timeout=timeout,
+                    retry_time=retry_time
+                )
             if self.telnet_port is not None:
-                self._open_telnet()
+                self._open_telnet(
+                    timeout=timeout,
+                    retry_time=retry_time
+                )
             if self.robot_port is not None:
-                self._open_robot()
+                self._open_robot(
+                    timeout=timeout,
+                    retry_time=retry_time
+                )
             self.write_to_renode(' ')
             self.write_to_renode(f'logFile @{self.renode_log_path}')
             self.initialized = True
@@ -328,12 +347,23 @@ class Pyrenode(metaclass=Singleton):
 
         return True
 
-    def _start_renode_process(self):
+    def _start_renode_process(
+            self,
+            timeout: float = 10.,
+            retry_time: float = 1):
         """
         Starts Renode in background process.
+
+        Parameters
+        ----------
+        timeout : float
+            Timeout for connection operations
+        retry_time : float
+            Time interval between subsequent tries
         """
         logging.info('starting Renode process')
         # check if renode or renode-run exists in system
+
         renode_executable = None
         renode_args = []
 
@@ -398,7 +428,11 @@ class Pyrenode(metaclass=Singleton):
 
                 return renode_process.pid
 
-            pid = self._retry_until_success(get_renode_process_pid)
+            pid = self._retry_until_success(
+                get_renode_process_pid,
+                timeout=timeout,
+                retry_time=retry_time
+            )
 
             self.subprocess_pids.append(pid)
             self.renode_pid = pid
@@ -408,15 +442,27 @@ class Pyrenode(metaclass=Singleton):
 
         logging.info(f'Renode process started, pid: {self.renode_pid}')
 
-    def _open_telnet(self):
+    def _open_telnet(
+            self,
+            timeout: float = 10.,
+            retry_time: float = 1):
         """
         Opens telnet connection.
+
+        Parameters
+        ----------
+        timeout : float
+            Timeout for connection operations
+        retry_time : float
+            Time interval between subsequent tries
         """
         logging.info('opening telnet')
         self.telnet_connection = self._retry_until_success(
             telnetlib.Telnet,
             ['localhost', self.telnet_port],
-            {'timeout': .5}
+            {'timeout': .5},
+            timeout=timeout,
+            retry_time=retry_time
         )
 
         # check if telnet is properly connected
@@ -429,9 +475,19 @@ class Pyrenode(metaclass=Singleton):
 
         logging.info('Telnet connected')
 
-    def _open_robot(self):
+    def _open_robot(
+            self,
+            timeout: float = 10.,
+            retry_time: float = 1):
         """
         Opens Robot connection.
+
+        Parameters
+        ----------
+        timeout : float
+            Timeout for connection operations
+        retry_time : float
+            Time interval between subsequent tries
         """
         logging.info('opening Robot connection')
         if self.robot_port == 0:
@@ -450,7 +506,11 @@ class Pyrenode(metaclass=Singleton):
 
                 return int(port_num_str)
 
-            robot_port = self._retry_until_success(get_robot_port)
+            robot_port = self._retry_until_success(
+                get_robot_port,
+                timeout=timeout,
+                retry_time=retry_time
+            )
 
             self.robot_port = robot_port
 
@@ -459,7 +519,9 @@ class Pyrenode(metaclass=Singleton):
             func_kwargs={
                 'uri': f'http://0.0.0.0:{self.robot_port}',
                 'timeout': 30.
-            }
+            },
+            timeout=timeout,
+            retry_time=retry_time
         )
 
         self.keywords = self.robot_connection.get_keyword_names()
@@ -476,9 +538,10 @@ class Pyrenode(metaclass=Singleton):
             func,
             func_args: List[Any] = [],
             func_kwargs: Dict[str, Any] = {},
-            retries=10,
-            retry_time=1) -> Any:
-        assert retries > 0
+            timeout: float = 10.,
+            retry_time: float = 1) -> Any:
+        retries = int(timeout / retry_time)
+        assert retries >= 0
 
         while True:
             try:
