@@ -137,27 +137,39 @@ class Pyrenode(metaclass=Singleton):
 
             self.write_to_renode('q')
 
+            proc = None
             # wait for Renode process to exit
             try:
                 proc = psutil.Process(self.renode_process.pid)
             except psutil.NoSuchProcess:
                 # Renode already closed
                 pass
-
-            status = proc.status()
-            start_time = time.perf_counter()
-            while status != psutil.STATUS_ZOMBIE:
-                status = proc.status()
-                logs += self.read_from_renode()
+            except KeyError:
+                # psutil may be unloaded at this moment if cleanup is called
+                # from __del__
                 logging.info(
-                    f'Renode process status: {status}'
+                    f'cannot access Renode process, error: '
+                    f'{traceback.format_exc()}'
                 )
-                time.sleep(.5)
-                if time.perf_counter() - start_time > 30:
-                    logging.error(
-                        'Renode did not close properly after 30s'
+                # give Renode 10 secs for cleanup end exit
+                time.sleep(10)
+                pass
+
+            if proc is not None:
+                status = proc.status()
+                start_time = time.perf_counter()
+                while status != psutil.STATUS_ZOMBIE:
+                    status = proc.status()
+                    logs += self.read_from_renode()
+                    logging.info(
+                        f'Renode process status: {status}'
                     )
-                    break
+                    time.sleep(.5)
+                    if time.perf_counter() - start_time > 30:
+                        logging.error(
+                            'Renode did not close properly after 30s'
+                        )
+                        break
 
             logging.debug(f'Renode logs:\n{logs}')
 
