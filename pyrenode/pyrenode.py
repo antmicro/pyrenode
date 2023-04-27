@@ -311,54 +311,6 @@ class Pyrenode(metaclass=Singleton):
 
         return self.robot_connection.run_keyword(keyword, keyword_args, None)
 
-    def wait_until_log_contains(
-            self,
-            string: str,
-            is_regex: bool = False,
-            timeout: Optional[float] = None) -> bool:
-        """
-        Reads renode log and returns when log contains given string.
-
-        Parameters
-        ----------
-        string : str
-            String that is searched in log
-        is_regex : bool
-            If string should be interpreted as regex pattern
-        timeout : Optional[float]
-            Wait timeout, if None then assumed to be infinity
-
-        Returns
-        -------
-        bool :
-            True if string occurred in log, false if timeout is hit
-        """
-        log_buffer = ''
-        start_time = time.perf_counter()
-
-        if is_regex:
-            pattern = re.compile(string)
-            while pattern.match(log_buffer) is None:
-                if (timeout is not None and
-                        time.perf_counter() - start_time > timeout):
-                    return False
-                if '\n' in log_buffer:
-                    log_buffer = log_buffer[log_buffer.rindex('\n') + 1:]
-                log_buffer += self.read_from_renode()
-                time.sleep(.01)
-
-        else:
-            while string not in log_buffer:
-                if (timeout is not None and
-                        time.perf_counter() - start_time > timeout):
-                    return False
-                if '\n' in log_buffer:
-                    log_buffer = log_buffer[log_buffer.rindex('\n') + 1:]
-                log_buffer += self.read_from_renode()
-                time.sleep(.01)
-
-        return True
-
     def _start_renode_process(
             self,
             timeout: float = 10.,
