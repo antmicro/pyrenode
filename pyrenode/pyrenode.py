@@ -550,7 +550,7 @@ class Pyrenode(metaclass=Singleton):
                     )
                     raise
                 else:
-                    logging.warning(
+                    logging.debug(
                         f'{func.__name__} failed: {e}, retries left: {retries}'
                     )
                 time.sleep(retry_time)
