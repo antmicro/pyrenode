@@ -10,6 +10,7 @@ import logging
 import tempfile
 import telnetlib
 import traceback
+import threading
 import subprocess
 import robot.libraries.Remote as robot_remote
 
@@ -38,6 +39,7 @@ class Pyrenode(metaclass=Singleton):
         self.robot_port = None
         self.renode_path = None
         self.renode_log_path = None
+        self.read_renode_stdout = None
 
         self.renode_process = None
         self.telnet_connection = None
@@ -50,6 +52,10 @@ class Pyrenode(metaclass=Singleton):
 
         self.renode_pipe_in = None
         self.renode_pipe_out = None
+
+        self.log_buffer = ''
+        self.log_reader_thread = None
+        self.log_reader_run = False
 
     def __enter__(self):
         return self
@@ -70,6 +76,7 @@ class Pyrenode(metaclass=Singleton):
             robot_port: int = 0,
             renode_path: Optional[Path] = None,
             renode_log_path: Path = DEFAULT_LOG_PATH,
+            read_renode_stdout: bool = False,
             timeout: float = 10.,
             retry_time: float = .2):
         """
@@ -88,6 +95,8 @@ class Pyrenode(metaclass=Singleton):
             Path to Renode executable
         renode_log_path : Path
             Path to Renode logs
+        read_renode_stdout : bool
+            Renode stdout will be read if True, may slow down the execution
         timeout : float
             Timeout for connection operations
         retry_time : float
@@ -100,6 +109,7 @@ class Pyrenode(metaclass=Singleton):
         self.robot_port = robot_port
         self.renode_path = renode_path
         self.renode_log_path = renode_log_path
+        self.read_renode_stdout = read_renode_stdout
         try:
             if spawn_renode:
                 self._start_renode_process(
@@ -118,6 +128,7 @@ class Pyrenode(metaclass=Singleton):
                 )
             self.write_to_renode(' ')
             self.write_to_renode(f'logFile @{self.renode_log_path}')
+
             self.initialized = True
             logging.info('initalized')
         except Exception:
@@ -132,7 +143,6 @@ class Pyrenode(metaclass=Singleton):
         Closes Renode and cleanups all resources.
         """
         logging.info('starting cleanup')
-        logs = ''
         if self.renode_process is not None:
 
             self.write_to_renode('q')
@@ -160,7 +170,6 @@ class Pyrenode(metaclass=Singleton):
                 start_time = time.perf_counter()
                 while status != psutil.STATUS_ZOMBIE:
                     status = proc.status()
-                    logs += self.read_from_renode()
                     logging.info(
                         f'Renode process status: {status}'
                     )
@@ -171,7 +180,7 @@ class Pyrenode(metaclass=Singleton):
                         )
                         break
 
-            logging.debug(f'Renode logs:\n{logs}')
+            logging.debug(f'Renode logs:\n{self.log_buffer}')
 
         for pid in set(self.subprocess_pids):
             try:
@@ -213,6 +222,13 @@ class Pyrenode(metaclass=Singleton):
         self.renode_pipe_in = None
         self.renode_pipe_out = None
 
+        self.log_buffer = ''
+        self.log_reader_run = False
+
+        if self.log_reader_thread is not None:
+            self.log_reader_thread.join()
+            self.log_reader_thread = None
+
         self.initialized = False
         logging.info('cleanup done')
 
@@ -252,14 +268,8 @@ class Pyrenode(metaclass=Singleton):
         str :
             Renode output
         """
-        if (self.renode_pipe_out is not None and
-                not self.renode_pipe_out.closed):
-            try:
-                return self.renode_pipe_out.read()
-            except TypeError:
-                # for some reason read raises TypeError when the buffer is
-                # empty
-                return ''
+        if self.renode_pipe_out is not None:
+            return self.log_buffer
         else:
             raise ConnectionError('No connection to Renode')
 
@@ -351,9 +361,10 @@ class Pyrenode(metaclass=Singleton):
             pipe_in = os.pipe()
             self.renode_pipe_in = os.fdopen(pipe_in[1], 'w')
 
-        pipe_out = os.pipe()
-        os.set_blocking(pipe_out[0], False)
-        self.renode_pipe_out = os.fdopen(pipe_out[0], 'r')
+        if self.read_renode_stdout:
+            pipe_out = os.pipe()
+            os.set_blocking(pipe_out[0], False)
+            self.renode_pipe_out = os.fdopen(pipe_out[0], 'r')
 
         renode_args.extend([
             '--plain',
@@ -375,8 +386,10 @@ class Pyrenode(metaclass=Singleton):
                 renode_executable,
                 *renode_args
             ],
-            stdin=pipe_in[0] if self.telnet_port is None else None,
-            stdout=pipe_out[1]
+            stdin=(pipe_in[0] if self.telnet_port is None
+                   else subprocess.DEVNULL),
+            stdout=(pipe_out[1] if self.read_renode_stdout
+                    else subprocess.DEVNULL)
         )
 
         self.subprocess_pids.append(self.renode_process.pid)
@@ -403,6 +416,26 @@ class Pyrenode(metaclass=Singleton):
 
         else:
             self.renode_pid = self.renode_process.pid
+
+        self.log_buffer = ''
+
+        if self.read_renode_stdout:
+            self.log_reader_run = True
+
+            def read_renode_logs():
+                while self.log_reader_run:
+                    try:
+                        r = self.renode_pipe_out.read()
+                        self.log_buffer += r
+                    except TypeError:
+                        # read raises TypeError when the buffer is empty
+                        pass
+                        time.sleep(.05)
+
+            self.log_reader_thread = threading.Thread(target=read_renode_logs)
+            self.log_reader_thread.start()
+
+            logging.debug('Log reader thread started')
 
         logging.info(f'Renode process started, pid: {self.renode_pid}')
 
@@ -481,8 +514,7 @@ class Pyrenode(metaclass=Singleton):
         self.robot_connection = self._retry_until_success(
             robot_remote.Remote,
             func_kwargs={
-                'uri': f'http://0.0.0.0:{self.robot_port}',
-                'timeout': 30.
+                'uri': f'http://0.0.0.0:{self.robot_port}'
             },
             timeout=timeout,
             retry_time=retry_time
