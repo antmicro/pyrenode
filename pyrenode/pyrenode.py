@@ -31,6 +31,11 @@ class TelnetUninitialized(Exception):
 
 
 class Pyrenode(metaclass=Singleton):
+    """
+    Python wrapper for Renode. It starts Renode process in the background and
+    provides an API for it.
+    """
+
     def __init__(self):
         """
         Initializes class variables
