@@ -192,7 +192,7 @@ class Pyrenode(metaclass=Singleton):
                 logging.debug(f'sending SIGTERM to process {pid}')
                 os.kill(pid, signal.SIGTERM)
             except ProcessLookupError:
-                logging.warning(f'process {pid} not found')
+                logging.debug(f'process {pid} not found')
                 continue
             except Exception as e:
                 logging.warning(
