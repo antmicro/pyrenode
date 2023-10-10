@@ -399,26 +399,34 @@ class Pyrenode(metaclass=Singleton):
 
         self.subprocess_pids.append(self.renode_process.pid)
 
-        if renode_executable == 'renode-run':
-            def get_renode_process_pid():
+        if renode_executable in ['renode', 'renode-run']:
+            if renode_executable == 'renode-run':
+                condition = lambda x : x.name() == 'renode'
+            elif renode_executable == 'renode':
+                # First child
+                condition = lambda x : True
+            else:
+                raise Exception("Illegal application flow. This code concerns only 'renode-run' and system wide installed application")
+
+            def get_renode_process_pid(condition):
                 renode_run_process = psutil.Process(self.renode_process.pid)
                 children = renode_run_process.children(recursive=False)
 
                 renode_process = next(
-                    ps for ps in children if ps.name() == 'renode'
+                    ps for ps in children if condition(ps)
                 )
 
                 return renode_process.pid
 
             pid = self._retry_until_success(
                 get_renode_process_pid,
+                func_args=[condition],
                 timeout=timeout,
                 retry_time=retry_time
             )
 
             self.subprocess_pids.append(pid)
             self.renode_pid = pid
-
         else:
             self.renode_pid = self.renode_process.pid
 
